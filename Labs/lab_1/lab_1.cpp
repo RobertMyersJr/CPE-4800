@@ -3,6 +3,7 @@
  */
 
 #include "password_file.hpp"
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -17,7 +18,6 @@ std::string get_user_input(std::string_view prompt) {
     std::cin >> response;
     return response;
 }
-
 std::string get_username() {
     return get_user_input("Enter username: ");
 }
@@ -45,8 +45,14 @@ void check_credentials() {
     }
 }
 
+unsigned int generate_code() {
+    return ((unsigned int)rand()) % 1'000'000;
+}
+
 void digit_code() {
-    std::string expected_code = "123456";
+    std::string expected_code = std::string(
+            std::to_string(generate_code())
+            );
     auto six_digit_code = get_six_digit_code(expected_code);
 
     if(expected_code != six_digit_code) {
@@ -56,5 +62,7 @@ void digit_code() {
 
 }
 int main() {
+    // Seed the random generator at the beginning
+    srand(0);
     check_credentials();
 }
