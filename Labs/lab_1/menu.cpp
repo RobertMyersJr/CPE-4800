@@ -1,18 +1,48 @@
 #include "menu.hpp"
+#include "password_file.hpp"
 #include "user_input.hpp"
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <string_view>
 
 void Menu::register_newuser_menu() {
+    PasswordFile password_file;
+
+    auto users_and_passwords = password_file.get_current_users_and_passwords();
+
     auto username = get_user_input("Username: ");
+
+    bool user_exists = false;
+
+    for(auto user_credentials : users_and_passwords) {
+        if(user_credentials.username_ == username) {
+            user_exists = true;
+            break;
+        }
+    }
+
+    if(user_exists) {
+        std::cout << "User is already in database. Leaving user registration menu\n";
+    }
+
     auto password = get_user_input("Password: ");
+
+    if(!password_file.check_if_password_is_valid(password)) {
+        return;
+    }
+    password_file.write_encrypted_username_and_password(username, password);
+    std::cout << "User has been registered!\n";
 }
 
 void Menu::change_password_menu() {
-    // Find user
+    PasswordFile password_file;
+
     auto password = get_user_input("Password: ");
-    std::cout << "";
+
+    if(password_file.check_if_password_is_valid(password)) {
+        password_file.update_user_and_password(current_user_, password);
+    }
 }
 
 menus Menu::display_menu(menus menu) {
@@ -45,6 +75,9 @@ menus Menu::display_main_menu() {
     if(input == "logout") {
         return EXIT_MENU;
     } 
-    std::cout << "Error: not a valid option please try again";
+    std::cout << "Error: not a valid option please try again\n";
     return MAIN_MENU;
+}
+
+Menu::Menu(std::string_view current_user) : current_user_(current_user) {
 }

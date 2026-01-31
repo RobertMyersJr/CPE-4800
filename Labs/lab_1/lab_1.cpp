@@ -5,14 +5,11 @@
 #include "password_file.hpp"
 #include "menu.hpp"
 #include "user_input.hpp"
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>
-#include <ios>
-#include <iostream>
 #include <string>
 #include <string_view>
+#include <format>
 
 std::string get_username() {
     return get_user_input("Enter username: ");
@@ -23,13 +20,11 @@ std::string get_password() {
 }
 
 std::string get_six_digit_code(std::string_view code) {
-    std::string prompt = "Enter the 6-digit code: ";
-    prompt += code;
-
+    std::string prompt = std::format("Enter the 6-digit code '{}' : ", code);
     return get_user_input(prompt);
 }
 
-void check_credentials() {
+std::string check_credentials() {
     PasswordFile passwordFile;
 
     auto username = get_username();
@@ -39,6 +34,7 @@ void check_credentials() {
         std::printf("The provided username and/or password is invalid. Please try again\n");
         exit(0);
     }
+    return username;
 }
 
 unsigned int generate_code() {
@@ -60,8 +56,9 @@ void digit_code() {
 int main() {
     // Seed the random generator at the beginning
     srand(0);
-    check_credentials();
-    Menu menu;
+    auto username = check_credentials();
+    digit_code();
+    Menu menu(username);
     menus current_menu = MAIN_MENU;
     while(1) {
         current_menu = menu.display_menu(current_menu);
