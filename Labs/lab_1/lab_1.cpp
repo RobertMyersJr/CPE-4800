@@ -3,6 +3,8 @@
  */
 
 #include "password_file.hpp"
+#include "menu.hpp"
+#include "user_input.hpp"
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -12,12 +14,6 @@
 #include <string>
 #include <string_view>
 
-std::string get_user_input(std::string_view prompt) {
-    std::string response;
-    std::cout << prompt;
-    std::cin >> response;
-    return response;
-}
 std::string get_username() {
     return get_user_input("Enter username: ");
 }
@@ -65,4 +61,9 @@ int main() {
     // Seed the random generator at the beginning
     srand(0);
     check_credentials();
+    Menu menu;
+    menus current_menu = MAIN_MENU;
+    while(1) {
+        current_menu = menu.display_menu(current_menu);
+    };
 }

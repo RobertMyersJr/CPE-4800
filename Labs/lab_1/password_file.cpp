@@ -9,6 +9,7 @@
 #include <openssl/sha.h>
 #include <string_view>
 #include <sstream>
+#include <vector>
 
 
 constexpr std::string_view USER_CREDENTIAL_FILE = {"user_credentials_plain.txt"};
@@ -44,6 +45,20 @@ std::string PasswordFile::get_sha256_string(std::string_view str) {
 bool PasswordFile::check_for_credentials(std::string_view user, std::string_view password) {
     constexpr size_t SIZE_OF_CREDENTIALS_BUFFER{101};
     std::array<char, SIZE_OF_CREDENTIALS_BUFFER> credentials;
+    std::ifstream user_credential_file(USER_CREDENTIAL_FILE.data(), std::ios::in);
+    
+    std::string given_credentials = std::string(user) + " " + get_sha256_string(password);
+    
+    while(user_credential_file.getline(credentials.data(), SIZE_OF_CREDENTIALS_BUFFER - 1)) {
+        if(given_credentials == std::string(credentials.data())) {
+            return true;
+        }
+    }
+    return false;
+
+}
+
+std::vector<std::string> get_current_users() {
     std::ifstream user_credential_file(USER_CREDENTIAL_FILE.data(), std::ios::in);
     
     std::string given_credentials = std::string(user) + " " + get_sha256_string(password);
