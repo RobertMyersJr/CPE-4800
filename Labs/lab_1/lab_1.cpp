@@ -55,7 +55,7 @@ void digit_code() {
 }
 int main() {
     // Seed the random generator at the beginning
-    srand(0);
+    srand(time(0));
     auto username = check_credentials();
     digit_code();
     Menu menu(username);

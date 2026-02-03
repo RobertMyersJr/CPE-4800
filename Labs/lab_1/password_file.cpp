@@ -14,7 +14,7 @@
 #include <vector>
 
 
-constexpr std::string_view USER_CREDENTIAL_FILE = {"user_credentials_plain.txt"};
+constexpr std::string_view USER_CREDENTIAL_FILE = {"user_credentials.txt"};
 constexpr size_t SIZE_OF_CREDENTIALS_BUFFER{101};
 
 constexpr size_t MIN_PASSWORD_SIZE = 8;
@@ -111,6 +111,7 @@ void PasswordFile::update_user_and_password(std::string_view username, std::stri
 }
 
 bool PasswordFile::check_if_password_is_valid(std::string_view password) {
+    std::string symbols{"~`! @#$%^&*()_-+={[}]|\\:;\"'<,>.?/"};
     auto password_length = password.length();
 
     bool has_uppercase = false;
@@ -118,7 +119,7 @@ bool PasswordFile::check_if_password_is_valid(std::string_view password) {
     bool has_symbol = false;
 
     if(password_length < MIN_PASSWORD_SIZE) {
-        std::cout << "Password is not 8+\n";
+        std::cout << "Password needs to have 8 or more characters\n";
         return false;
     }
 
@@ -127,21 +128,21 @@ bool PasswordFile::check_if_password_is_valid(std::string_view password) {
             has_uppercase = true;
         } else if (std::islower(password[i])) {
             has_lowercase = true;
-        } else if(password[i] == '%') {
+        } else if(symbols.find(password[i]) != std::string::npos) {
             has_symbol = true;
         }
     }
     
     if(!has_uppercase) {
-        std::cout << "Password need to have at least one uppercase letter\n";
+        std::cout << "Password needs to have at least one uppercase letter\n";
     }
 
     if(!has_lowercase) {
-        std::cout << "Password need to have at least lowercase letter\n";
+        std::cout << "Password needs to have at least lowercase letter\n";
     }
     
     if(!has_symbol) {
-        std::cout << "Password need to have the '%' symbol\n";
+        std::cout << "Password needs to have a symbol\n";
     }
 
     return (has_lowercase && has_uppercase && has_symbol);
