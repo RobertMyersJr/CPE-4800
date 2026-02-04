@@ -1,3 +1,12 @@
+/**
+******************************************************************************
+* @file user_input.cpp
+* @author Robert Myers Jr.
+* @version V1.0
+* @brief Implementation of the get_user_input function to get user input
+* verification.
+******************************************************************************
+*/
 #include "user_input.hpp"
 
 #include <iostream>

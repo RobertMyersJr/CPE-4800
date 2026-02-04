@@ -1,3 +1,12 @@
+/**
+******************************************************************************
+* @file menu.cpp
+* @author Robert Myers Jr.
+* @version V1.0
+* @brief Source file of the Menu Class. See header for more information
+******************************************************************************
+*/
+
 #include "menu.hpp"
 #include "password_file.hpp"
 #include "user_input.hpp"

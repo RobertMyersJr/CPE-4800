@@ -1,3 +1,11 @@
+/**
+******************************************************************************
+* @file password_file.cpp
+* @author Robert Myers Jr.
+* @version V1.0
+* @brief Source file of the PasswordFile Class. See header for more information
+******************************************************************************
+*/
 #include "password_file.hpp"
 #include <array>
 #include <cctype>

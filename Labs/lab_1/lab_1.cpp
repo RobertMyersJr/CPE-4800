@@ -1,6 +1,13 @@
 /**
- * TODO
- */
+******************************************************************************
+* @file lab_1.cpp
+* @author Robert Myers Jr.
+* @version V1.0
+* @brief The Main logic of the program. Does the credential check and six digit
+* verification. After verification it prompts a menu for the user to input commands
+* into.
+******************************************************************************
+*/
 
 #include "password_file.hpp"
 #include "menu.hpp"
