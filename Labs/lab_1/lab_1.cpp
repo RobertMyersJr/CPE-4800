@@ -1,13 +1,13 @@
 /**
-******************************************************************************
-* @file lab_1.cpp
-* @author Robert Myers Jr.
-* @version V1.0
-* @brief The Main logic of the program. Does the credential check and six digit
-* verification. After verification it prompts a menu for the user to input commands
-* into.
-******************************************************************************
-*/
+ ******************************************************************************
+ * @file lab_1.cpp
+ * @author Robert Myers Jr.
+ * @version V1.0
+ * @brief The Main logic of the program. Does the credential check and six digit
+ * verification. After verification it prompts a menu for the user to input commands
+ * into.
+ ******************************************************************************
+ */
 
 #include "password_file.hpp"
 #include "menu.hpp"
@@ -49,9 +49,13 @@ unsigned int generate_code() {
 }
 
 void digit_code() {
-    std::string expected_code = std::string(
-            std::to_string(generate_code())
-            );
+    std::string expected_code = "";
+    while(expected_code.length() != 6) {
+        expected_code = std::string(
+                std::to_string(generate_code())
+                );
+    }
+
     auto six_digit_code = get_six_digit_code(expected_code);
 
     if(expected_code != six_digit_code) {

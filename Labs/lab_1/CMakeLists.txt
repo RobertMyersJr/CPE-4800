@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Generates a compile commands file for LSP
 set(CMAKE_EXPORT_COMPILE_COMMANDS True)
 
-add_executable(myexample
+add_executable(lab1
     lab_1.cpp
     menu.cpp
     password_file.cpp
@@ -24,4 +24,4 @@ add_executable(myexample
 
 # Link OpenSSL
 find_package(OpenSSL REQUIRED)
-target_link_libraries(myexample PRIVATE OpenSSL::Crypto)
+target_link_libraries(lab1 PRIVATE OpenSSL::Crypto)

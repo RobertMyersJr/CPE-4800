@@ -33,6 +33,7 @@ void Menu::register_newuser_menu() {
 
     if(user_exists) {
         std::cout << "User is already in database. Leaving user registration menu\n";
+        return;
     }
 
     auto password = get_user_input("Password: ");
@@ -51,6 +52,7 @@ void Menu::change_password_menu() {
 
     if(password_file.check_if_password_is_valid(password)) {
         password_file.update_user_and_password(current_user_, password);
+        std::cout << "Successfully changed password\n";
     }
 }
 
@@ -65,6 +67,7 @@ menus Menu::display_menu(menus menu) {
             change_password_menu();
             return MAIN_MENU;
         case EXIT_MENU:
+            std::cout << "Goodbye!\n";
             exit(0);
         default:
             return display_main_menu();
