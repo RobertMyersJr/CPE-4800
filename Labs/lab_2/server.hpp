@@ -18,12 +18,15 @@ class Server {
          */
         void start_bank_server();
     private:
-        void send_message(std::string message);
+        std::string send_message(std::string message);
+        std::string read_message();
         int get_account_number();
         int sock_;
         int client_sock_;
+
         std::string message_out_;
         char message_in_[buflen];
+
         struct sockaddr_in server_addr_;
         struct sockaddr_in client_addr_;
 };

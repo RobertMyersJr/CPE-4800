@@ -1,7 +1,9 @@
 #include "server.hpp"
 #include "bank_service.hpp"
+#include "tools/evp.hpp"
 
 #include <iostream>
+#include <iterator>
 #include <strings.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
@@ -10,6 +12,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>  
 #include <sys/unistd.h>
+#include <vector>
 
 constexpr int max = 256;
 constexpr int port = 1234;
@@ -20,7 +23,7 @@ Server::Server() {
     {
         std::cout << "socket call failed\n";
     }
-    int yes;
+    int yes = 1;
     setsockopt(sock_,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(int));
 
     server_addr_.sin_family = AF_INET;
@@ -39,12 +42,37 @@ Server::Server() {
     printf("server init done\n");
 }
 
-int Server::get_account_number() {
-    std::string message_to_send("Enter account number: ");
-    sendto(client_sock_, message_to_send.c_str(), message_to_send.length(), 0, (struct sockaddr *)&client_addr_, sizeof(client_addr_));
+std::string Server::read_message() {
+    bzero(message_in_, max);
+    int len = recvfrom(client_sock_, message_in_, max, 0, NULL, NULL);
+    if (len == 0)
+    {
+        return "";
+    }
+    auto message_recevied = std::vector<unsigned char>(message_in_, 
+            message_in_ + len);
+    return std::string(quick_decrypt(message_recevied));
+}
+
+std::string Server::send_message(std::string message){
+    auto encrypted_message = quick_encrypt(message);
+    sendto(client_sock_, encrypted_message.data(), encrypted_message.size(), 0, (struct sockaddr *)&client_addr_, sizeof(client_addr_));
+
     bzero(message_in_, max);
     int n = recvfrom(client_sock_, message_in_, max, 0, NULL, NULL);
-    std::string account_number_given(message_in_);
+
+    auto message_received = std::vector<unsigned char>(message_in_, message_in_ + n);
+    
+    auto received = quick_decrypt(message_received);
+
+    return received;
+}
+
+int Server::get_account_number() {
+    std::string message_to_send("Enter account number: ");
+
+    std::string account_number_given = send_message(message_to_send);
+
     for(int i = 0; i < account_number_given.length(); i++) {
         char letter = account_number_given.c_str()[i];
         if(!isdigit(letter)) {
@@ -72,29 +100,26 @@ void Server::start_bank_server() {
         printf("server accepted a client connection from \n");
         printf("Client: IP= %s port=%d \n", inet_ntoa(client_addr_.sin_addr), ntohs(client_addr_.sin_port));
 
-        BankService bank_service(client_sock_, 123);
-        int n = recvfrom(client_sock_, message_in_, max, 0, NULL, NULL);
-        if(get_account_number() == -1) {
+        auto account_number = get_account_number();
+        if(account_number == -1) {
+            std::cout << "account number input failure\n";
             std::string message_to_send{"Account number is invalid. Exiting..."};
-            sendto(client_sock_, message_to_send.c_str(), message_to_send.length(), 0, (struct sockaddr *)&client_addr_, sizeof(client_addr_));
+            send_message(message_to_send);
             close(client_sock_);
             continue;
         }
+        BankService bank_service(client_sock_, account_number);
         bank_service.send_prompt();
         while(1)
         {
-            int n = recvfrom(client_sock_, message_in_, max, 0, NULL, NULL);
-            if (n == 0)
+            auto received_message = read_message();
+            if (received_message == "")
             {
                 printf("server client died, server loops\n");
                 close(client_sock_);
                 break;
             }
-            // show the string
-            printf("server read %s\n", message_in_);
-            // write back to client
-            //n = write(client_sock_, line, max);
-            if(!bank_service.run_bank_service(std::string(message_in_))) {
+            if(!bank_service.run_bank_service(received_message)) {
                 break;
             }
         }

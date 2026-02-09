@@ -9,6 +9,8 @@ class Client {
     public:
         Client();
         std::string send_message(std::string message);
+        std::string read_message();
+        std::string read_message_aes();
         std::string send_message_aes(std::string message);
     private:
         int sock_;

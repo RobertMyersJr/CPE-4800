@@ -35,11 +35,25 @@ std::string Client::send_message(std::string message) {
     return std::string(message_in_);
 }
 
+std::string Client::read_message() {
+    bzero(message_in_, max);
+    read(sock_, message_in_, max);
+    return std::string(message_in_);
+}
+
+std::string Client::read_message_aes() {
+    bzero(message_in_, max);
+    int len = read(sock_, message_in_, max);
+    auto message_recevied = std::vector<unsigned char>(message_in_, 
+            message_in_ + len);
+    return std::string(quick_decrypt(message_recevied));
+}
+
 std::string Client::send_message_aes(std::string message) {
     auto encrypted_message = quick_encrypt(message);
-    write(sock_, encrypted_message.data(), max);
-
+    write(sock_, encrypted_message.data(), encrypted_message.size());
     int n = read(sock_, message_in_, max);
-
-    return quick_decrypt(std::string(message_in_));
+    auto message_recevied = std::vector<unsigned char>(message_in_, 
+            message_in_ + n);
+    return quick_decrypt(message_recevied);
 }

@@ -13,6 +13,7 @@ class BankService {
         double balance;
         struct sockaddr_in *client_addr;
 
+        void send_message(std::string message);
         void write_deposit_to_transcript(double deposit_amount);
         void write_withdraw_to_transcript(double withdraw_amount);
         std::string withdraw_command(std::string withdraw_command);
