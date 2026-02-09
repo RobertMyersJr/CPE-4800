@@ -15,11 +15,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Generates a compile commands file for LSP
 set(CMAKE_EXPORT_COMPILE_COMMANDS True)
 
-add_executable(lab2
-    lab2_client.cpp
+add_executable(client
     client.cpp
+    bank_service.cpp
+    tools/evp.cpp
+    lab2_client.cpp
+    user_input.cpp
+)
+
+add_executable(server
+    bank_service.cpp
+    tools/evp.cpp
+    lab2_server.cpp
+    server.cpp
 )
 
 # Link OpenSSL
 find_package(OpenSSL REQUIRED)
-target_link_libraries(lab2 PRIVATE OpenSSL::Crypto)
+target_link_libraries(client PRIVATE OpenSSL::Crypto)
+target_link_libraries(server PRIVATE OpenSSL::Crypto)

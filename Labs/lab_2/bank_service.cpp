@@ -1,0 +1,179 @@
+#include "bank_service.hpp"
+#include "client.hpp"
+#include "user_input.hpp"
+#include <bit>
+#include <cctype>
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <sys/socket.h>
+#include <sys/unistd.h>
+#include <vector>
+#include <format>
+
+namespace {
+    constexpr std::string_view TRANSCRIPT_FILE = "transcript_log.txt";
+    bool convert_string(std::string_view floating_point_number, double & output) {
+        for(int i = 0; i < floating_point_number.length(); i++) {
+            if(!std::isdigit(floating_point_number[i]) || floating_point_number[i] == '.') {
+                return false;
+            }
+        }
+        try {
+            output = std::stod(floating_point_number.data());
+            return true;
+        } catch (const std::invalid_argument& e) {
+            return false;
+        } catch (const std::out_of_range& e) {
+            return false;
+        }
+    }
+    double truncate(double floating_point_number) {
+        return std::trunc(floating_point_number*100.00)/100.0;
+    }
+}
+
+BankService::BankService(int client_socket, int account_number): 
+    client_socket_(client_socket), 
+    account_number_(account_number),
+    balance(1000.0) {
+}
+
+bool BankService::run_bank_service(std::string input) {
+    std::string message_to_send;
+    if(input.starts_with("withdraw")) {
+        message_to_send = withdraw_command(input);
+    } else if(input.starts_with("deposit")) {
+        message_to_send = deposit_command(input);
+    } else if(input == "balance") {
+        message_to_send = balance_command();
+    } else if(input == "exit") {
+        exit_command();
+        return false;
+    } else {
+        message_to_send = "Error: invalid command\n";
+    }
+    message_to_send += "Enter Command (withdraw <amount>, deposit <amount>, balance, exit): ";
+    sendto(client_socket_, message_to_send.c_str(), message_to_send.length(), 0, (struct sockaddr *)client_addr, sizeof(*client_addr));
+    return true;
+}
+
+void BankService::send_prompt()  {
+    std::string message_to_send = "Enter Command (withdraw <amount>, deposit <amount>, balance, exit): ";
+    sendto(client_socket_, message_to_send.c_str(), message_to_send.length(), 0, (struct sockaddr *)client_addr, sizeof(*client_addr));
+}
+
+std::string BankService::deposit_command(std::string withdraw_command) {
+    std::stringstream stream(withdraw_command);
+
+    std::vector<std::string> words;
+    std::string word;
+
+    while(stream >> word) {
+        words.push_back(word);
+    }
+    if(words.size() >= 3 || words.size() <= 1) {
+        return std::format("Error: expected 1 numeric argument for the deposit command but got {} arguments\n", words.size() - 1);
+    }
+
+    double amount_to_deposit = 0;
+
+    // Verify the argument is valid
+    if(!convert_string(words.at(1), amount_to_deposit) && amount_to_deposit >= 0.0) {
+        return "Error: Amount specified is invalid\n";
+    }
+
+    auto truncated_amount_to_deposit = truncate(amount_to_deposit);
+
+    std::string message_to_send = "";
+    if(truncated_amount_to_deposit != amount_to_deposit) {
+        message_to_send = std::format("Truncating ${:.3f} to ${:.2f}\n", amount_to_deposit, truncated_amount_to_deposit);
+    }
+
+    balance += truncated_amount_to_deposit;
+    message_to_send += std::format("Depositing ${:.2f}. Balance: ${:.2f}\n", amount_to_deposit, balance);
+
+    write_deposit_to_transcript(truncated_amount_to_deposit);
+
+    return message_to_send;
+}
+
+std::string BankService::withdraw_command(std::string withdraw_command) {
+    std::stringstream stream(withdraw_command);
+
+    std::vector<std::string> words;
+    std::string word;
+
+    while(stream >> word) {
+        words.push_back(word);
+    }
+    if(words.size() >= 3 || words.size() <= 1) {
+        return std::format("Error: expected 1 numeric argument for the withdraw command but got {} arguments\n", words.size() - 1);
+    }
+
+    double amount_to_withdraw = 0;
+
+    // Verify the amount is a floating_point_number and is positive
+    if(!convert_string(words.at(1), amount_to_withdraw) && amount_to_withdraw >= 0.0) {
+        return "Error: Amount specified is invalid\n";
+    }
+
+    auto truncated_amount_to_withdraw = truncate(amount_to_withdraw);
+
+    // Don't take out more money than whats in the account
+    if(truncated_amount_to_withdraw > balance) {
+        return std::format("Error: can't withdraw over the current balance of {:.2f}\n", balance);
+    }
+
+    std::string message_to_send = "";
+
+    if(truncated_amount_to_withdraw != amount_to_withdraw) {
+        message_to_send = std::format("Truncating ${:.2f} to ${:.2f}\n", amount_to_withdraw, truncated_amount_to_withdraw);
+    }
+
+    balance -= truncated_amount_to_withdraw;
+
+    write_withdraw_to_transcript(truncated_amount_to_withdraw);
+    return message_to_send + std::format("Taking out ${:.2f}. Balance: ${:.2f}\n", amount_to_withdraw, balance);
+}
+
+std::string BankService::balance_command() {
+    return std::format("Current balance ${:.2f}\n", balance);
+}
+
+void BankService::exit_command() {
+    std::string message_to_send = "Exiting...\n";
+    sendto(client_socket_, message_to_send.c_str(), message_to_send.length(), 0, (struct sockaddr *)client_addr, sizeof(*client_addr));
+    close(client_socket_);
+}
+
+void BankService::write_withdraw_to_transcript(double withdraw_amount) {
+    std::ofstream transcript_file(TRANSCRIPT_FILE.data(), std::ios_base::app);
+
+    auto sys_time = std::chrono::system_clock::now();
+    std::string formatted_time = std::format("{:%Y-%m-%d %H:%M:%S}\n", sys_time);
+
+    std::string formatted_deposit = std::format(" - Account: {} - Withdraw of ${:.2f} successful. New balance : ${:.2f}.\n", sys_time, withdraw_amount, balance);
+
+    transcript_file << formatted_time;
+    transcript_file << formatted_deposit;
+}
+void BankService::write_deposit_to_transcript(double deposit_amount) {
+    std::ofstream transcript_file(TRANSCRIPT_FILE.data(), std::ios_base::app);
+
+    auto sys_time = std::chrono::system_clock::now();
+    std::string formatted_time = std::format("{:%Y-%m-%d %H:%M:%S}\n", sys_time);
+
+    std::string formatted_deposit = std::format("- Account: {} - Deposit of ${:.2f} successful. New balance : ${:.2f}.\n", sys_time, deposit_amount, balance);
+
+    transcript_file << formatted_time;
+    transcript_file << formatted_deposit;
+
+}
