@@ -1,3 +1,11 @@
+/**
+******************************************************************************
+* @file client.cpp
+* @author Robert Myers Jr.
+* @version V1.0
+* @brief Implementation of the client class. See header for more information 
+******************************************************************************
+*/
 #include "client.hpp"
 #include "tools/evp.hpp"
 

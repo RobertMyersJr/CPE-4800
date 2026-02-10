@@ -1,3 +1,11 @@
+/**
+******************************************************************************
+* @file evp.cpp
+* @author Robert Myers Jr.
+* @version V1.0
+* @brief Implementation of the evp functions. See header for more information 
+******************************************************************************
+*/
 #include "evp.hpp"
 #include <array>
 #include <cstring>

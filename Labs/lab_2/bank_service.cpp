@@ -1,3 +1,11 @@
+/**
+ ******************************************************************************
+ * @file bank_service.hpp
+ * @author Robert Myers Jr.
+ * @version V1.0
+ * @brief Implementation of the BankService class. See header for more information.
+ ******************************************************************************
+ */
 #include "bank_service.hpp"
 #include "client.hpp"
 #include "tools/evp.hpp"
@@ -51,7 +59,34 @@ BankService::BankService(int client_socket, int account_number):
     client_socket_(client_socket), 
     account_number_(account_number),
     balance(1000.0) {
-}
+        std::ifstream transcript_file(TRANSCRIPT_FILE.data());
+
+        std::stringstream buffer;
+        buffer << transcript_file.rdbuf();
+        auto transcation_log = buffer.str();
+
+        auto line_to_find = std::format("- Account: {}", account_number_);
+
+        size_t found_pos = transcation_log.rfind(line_to_find);
+
+        // File is empty let's not try to read
+        if (found_pos == std::string::npos) {
+            return;
+        }
+
+        size_t lineStart = transcation_log.rfind('\n', found_pos);
+        
+        // Move past the newline character
+        lineStart++; 
+
+        size_t lineEnd = transcation_log.find('\n', found_pos);
+
+        std::string lastLine = transcation_log.substr(lineStart, lineEnd - lineStart);
+
+        size_t last_space_pos = lastLine.rfind(' ');
+
+        balance = std::stod(lastLine.substr(last_space_pos + 2));
+    }
 
 bool BankService::run_bank_service(std::string input) {
     std::string message_to_send;
@@ -105,7 +140,7 @@ std::string BankService::deposit_command(std::string withdraw_command) {
     }
 
     balance += truncated_amount_to_deposit;
-    message_to_send += std::format("Depositing ${:.2f}. Balance: ${:.2f}\n", amount_to_deposit, balance);
+    message_to_send += std::format("Depositing ${:.2f}. Balance: ${:.2f}\n", truncated_amount_to_deposit, balance);
 
     write_deposit_to_transcript(truncated_amount_to_deposit);
 
@@ -148,7 +183,7 @@ std::string BankService::withdraw_command(std::string withdraw_command) {
     balance -= truncated_amount_to_withdraw;
 
     write_withdraw_to_transcript(truncated_amount_to_withdraw);
-    return message_to_send + std::format("Withdrawing ${:.2f}. Balance: ${:.2f}\n", amount_to_withdraw, balance);
+    return message_to_send + std::format("Withdrawing ${:.2f}. Balance: ${:.2f}\n", truncated_amount_to_withdraw, balance);
 }
 
 std::string BankService::balance_command() {
@@ -176,7 +211,7 @@ void BankService::write_withdraw_to_transcript(double withdraw_amount) {
 
     auto formatted_time = get_time();
 
-    std::string formatted_deposit = std::format("- Account: {} - Withdraw of ${:.2f} successful. New balance : ${:.2f}.\n", account_number_, withdraw_amount, balance);
+    std::string formatted_deposit = std::format("- Account: {} - Withdraw of ${:.2f} successful. New balance : ${:.2f}\n", account_number_, withdraw_amount, balance);
 
     transcript_file << formatted_time;
     transcript_file << formatted_deposit;
@@ -186,7 +221,7 @@ void BankService::write_deposit_to_transcript(double deposit_amount) {
 
     auto formatted_time = get_time();
 
-    std::string formatted_deposit = std::format("- Account: {} - Deposit of ${:.2f} successful. New balance : ${:.2f}.\n", account_number_, deposit_amount, balance);
+    std::string formatted_deposit = std::format("- Account: {} - Deposit of ${:.2f} successful. New balance : ${:.2f}\n", account_number_, deposit_amount, balance);
 
     transcript_file << formatted_time;
     transcript_file << formatted_deposit;

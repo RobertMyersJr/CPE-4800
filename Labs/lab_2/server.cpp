@@ -1,3 +1,11 @@
+/**
+******************************************************************************
+* @file Server.cpp
+* @author Robert Myers Jr.
+* @version V1.0
+* @brief Implementation of the Server Class. See header for more informating
+******************************************************************************
+*/
 #include "server.hpp"
 #include "bank_service.hpp"
 #include "tools/evp.hpp"
