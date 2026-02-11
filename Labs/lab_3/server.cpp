@@ -1,11 +1,21 @@
+/**
+ ******************************************************************************
+ * @file Server.cpp
+ * @author Robert Myers Jr.
+ * @version V1.0
+ * @brief Implementation of the Server Class. See header for more informating
+ ******************************************************************************
+ */
 #include "server.hpp"
 #include "evp.hpp"
 #include "user_input.hpp"
 #include "rsa_key_tools.hpp"
+#include <fstream>
 #include <openssl/evp.h>
 
 #include <iostream>
 #include <iterator>
+#include <string_view>
 #include <strings.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
@@ -17,7 +27,9 @@
 #include <vector>
 
 constexpr int max = 256;
-constexpr int port = 1234;
+constexpr int port = 8080;
+
+constexpr std::string_view TRANSCRIPT_FILE{"server_log.txt"};
 
 Server::Server() {
     sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -38,7 +50,9 @@ Server::Server() {
     if (r<0)
     {
         printf("bind failed\n");
+        exit(1);
     }
+    std::cout << "bind success\nPORT: " << port << "\n";
     printf("server is listening  ...\n");
     listen(sock_, 5); // queue length of 5
     printf("server init done\n");
@@ -47,7 +61,6 @@ Server::Server() {
 std::string Server::read_encrpyted_message(EVP_PKEY * private_key) {
     bzero(message_in_, max);
     auto len = recvfrom(client_sock_, message_in_, max, 0, NULL, NULL);
-    std::cout << "len" << len << "\n";
     auto encrpyted_message = std::vector<char>(message_in_, 
             message_in_ + len);
     return decrypt_message(encrpyted_message, private_key);
@@ -70,18 +83,12 @@ void Server::send_message(std::string message){
 
 void Server::start_server() {
     EVP_PKEY * private_key;
-    EVP_PKEY * other_user_public_key;
     if(!open_private_key(&private_key, "server.pem")) {
         std::cout << "Failed to get private key\n";
         std::cout << "Ending program...\n";
         exit(0);
     }
-    if(!open_public_key(&other_user_public_key, "client.pem.pub")) {
-        std::cout << "Failed to get public key\n";
-        std::cout << "Ending program...\n";
-        exit(0);
-    }
-    //auto * other_user_public_key = prompt_for_public_key();
+    auto * other_user_public_key = prompt_for_public_key();
     while (1) //Try to accept a client request
     {
         printf("server: accepting new connection ...\n");
@@ -98,6 +105,7 @@ void Server::start_server() {
         while(1)
         {
             auto client_message = read_encrpyted_message(private_key);
+            client_message_to_log(client_message);
             if (client_message == "")
             {
                 printf("server client died, server loops\n");
@@ -111,9 +119,17 @@ void Server::start_server() {
             }
 
             std::cout << "Client: " << client_message << "\n";
+            
             auto message_to_be_sent = get_user_input("Server: ");
 
+            // Don't send a empty message as the server may interpret that as a closed connection
+            while(message_to_be_sent == "") {
+                std::cout << "ERROR: message is empty. Try again.\n";
+                message_to_be_sent = get_user_input("Server: ");
+            }
+
             send_encrpyted_message(message_to_be_sent, other_user_public_key);
+            server_message_to_log(message_to_be_sent);
             if(message_to_be_sent == "quit") {
                 std::cout << "Closing connection...\n";
                 close(sock_);
@@ -123,4 +139,12 @@ void Server::start_server() {
         }
     }
 
+}
+void Server::server_message_to_log(std::string_view message_to_write) {
+   std::ofstream transcript_file(TRANSCRIPT_FILE.data(), std::ios_base::app);
+   transcript_file << "Server: " << message_to_write << "\n";
+}
+void Server::client_message_to_log(std::string_view message_to_write) {
+   std::ofstream transcript_file(TRANSCRIPT_FILE.data(), std::ios_base::app);
+   transcript_file << "Client: " << message_to_write << "\n";
 }

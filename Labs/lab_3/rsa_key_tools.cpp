@@ -1,3 +1,12 @@
+/**
+******************************************************************************
+* @file rsa_key_tools.cpp
+* @author Robert Myers Jr.
+* @version V1.0
+* @brief Implementation of the rsa tool functions. See header for more information
+******************************************************************************
+*/
+
 #include <iostream>
 #include <openssl/evp.h>
 #include "rsa_key_tools.hpp"
@@ -41,7 +50,7 @@ EVP_PKEY *prompt_for_public_key() {
     EVP_PKEY * public_key = EVP_PKEY_new();
     if(!open_public_key(&public_key, file_path)) {
         std::cout << "Failed to acquire public key. Ending program.\n";
-        exit(0);
+        exit(1);
     }
     return public_key;
 }

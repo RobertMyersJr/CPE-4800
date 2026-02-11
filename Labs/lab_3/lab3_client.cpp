@@ -13,28 +13,29 @@ int main() {
     ERR_load_crypto_strings();
 
     EVP_PKEY * private_key;
-    EVP_PKEY * other_user_public_key;
+
+    auto ip = get_user_input("Server's ip address: ");
 
     if(!open_private_key(&private_key, "client.pem")) {
         std::cout << "Failed to private key\n";
         std::cout << "Ending program...\n";
-        exit(0);
+        exit(1);
     }
-    // auto * other_user_public_key = prompt_for_public_key();
-    if(!open_public_key(&other_user_public_key, "server.pem.pub")) {
-        std::cout << "Failed to get public key\n";
-        std::cout << "Ending program...\n";
-        exit(0);
-    }
-    Client client;
+    auto * other_user_public_key = prompt_for_public_key();
+
+    Client client(ip);
 
     std::string server_message;
     std::cout << "Connection established\n";
     while(1) {
-        auto message_to_send = get_user_input("Client: ");
+        std::string message_to_be_sent = get_user_input("Client: ");
+        while(message_to_be_sent == "") {
+            std::cout << "ERROR: message is empty. Try again.\n";
+            message_to_be_sent = get_user_input("Client: ");
+        }
 
-        client.send_message_rsa(message_to_send, other_user_public_key);
-        if(message_to_send == "quit") {
+        client.send_message_rsa(message_to_be_sent, other_user_public_key);
+        if(message_to_be_sent == "quit") {
             std::cout << "Closing connection...\n";
             std::cout << "Stopping client...\n";
             exit(0);
