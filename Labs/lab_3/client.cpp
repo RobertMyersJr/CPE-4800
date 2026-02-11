@@ -2,6 +2,7 @@
 #include "evp.hpp"
 
 #include <iostream>
+#include <openssl/evp.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -43,16 +44,16 @@ std::string Client::read_message() {
     return std::string(message_in_);
 }
 
-std::string Client::read_message_rsa() {
+std::string Client::read_message_rsa(EVP_PKEY *private_key) {
     bzero(message_in_, max);
     int len = read(sock_, message_in_, max);
     auto message_recevied = std::vector<char>(message_in_, 
             message_in_ + len);
-    return decrypt_message(message_recevied);
+    return decrypt_message(message_recevied, private_key);
 }
 
-void Client::send_message_rsa(std::string message) {
+void Client::send_message_rsa(std::string message, EVP_PKEY * public_key) {
     std::cout << "sending message" << std::endl;
-    auto encrypted_message = encrypt_message(message);
+    auto encrypted_message = encrypt_message(message, public_key);
     write(sock_, encrypted_message.data(), encrypted_message.size());
 }

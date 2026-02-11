@@ -1,6 +1,8 @@
 #include "server.hpp"
 #include "evp.hpp"
 #include "user_input.hpp"
+#include "rsa_key_tools.hpp"
+#include <openssl/evp.h>
 
 #include <iostream>
 #include <iterator>
@@ -42,13 +44,13 @@ Server::Server() {
     printf("server init done\n");
 }
 
-std::string Server::read_encrpyted_message() {
+std::string Server::read_encrpyted_message(EVP_PKEY * private_key) {
     bzero(message_in_, max);
     auto len = recvfrom(client_sock_, message_in_, max, 0, NULL, NULL);
     std::cout << "len" << len << "\n";
     auto encrpyted_message = std::vector<char>(message_in_, 
             message_in_ + len);
-    return decrypt_message(encrpyted_message);
+    return decrypt_message(encrpyted_message, private_key);
 }
 
 std::string Server::read_message() {
@@ -57,8 +59,8 @@ std::string Server::read_message() {
     return std::string(message_in_, len);
 }
 
-void Server::send_encrpyted_message(std::string message){
-    auto encrpyted_message = encrypt_message(message);
+void Server::send_encrpyted_message(std::string message, EVP_PKEY * public_key){
+    auto encrpyted_message = encrypt_message(message, public_key);
     sendto(client_sock_, encrpyted_message.data(), encrpyted_message.size(), 0, (struct sockaddr *)&client_addr_, sizeof(client_addr_));
 }
 
@@ -66,7 +68,20 @@ void Server::send_message(std::string message){
     sendto(client_sock_, message.data(), message.size(), 0, (struct sockaddr *)&client_addr_, sizeof(client_addr_));
 }
 
-void Server::start_bank_server() {
+void Server::start_server() {
+    EVP_PKEY * private_key;
+    EVP_PKEY * other_user_public_key;
+    if(!open_private_key(&private_key, "server.pem")) {
+        std::cout << "Failed to get private key\n";
+        std::cout << "Ending program...\n";
+        exit(0);
+    }
+    if(!open_public_key(&other_user_public_key, "client.pem.pub")) {
+        std::cout << "Failed to get public key\n";
+        std::cout << "Ending program...\n";
+        exit(0);
+    }
+    //auto * other_user_public_key = prompt_for_public_key();
     while (1) //Try to accept a client request
     {
         printf("server: accepting new connection ...\n");
@@ -82,13 +97,13 @@ void Server::start_bank_server() {
 
         while(1)
         {
-            auto client_message = read_encrpyted_message();
+            auto client_message = read_encrpyted_message(private_key);
             if (client_message == "")
             {
                 printf("server client died, server loops\n");
                 close(client_sock_);
                 break;
-            } else if(client_message == "exit") {
+            } else if(client_message == "quit") {
                 std::cout << "Closing connection...\n";
                 close(sock_);
                 std::cout << "Stopping server...\n";
@@ -98,7 +113,7 @@ void Server::start_bank_server() {
             std::cout << "Client: " << client_message << "\n";
             auto message_to_be_sent = get_user_input("Server: ");
 
-            send_encrpyted_message(message_to_be_sent);
+            send_encrpyted_message(message_to_be_sent, other_user_public_key);
             if(message_to_be_sent == "quit") {
                 std::cout << "Closing connection...\n";
                 close(sock_);

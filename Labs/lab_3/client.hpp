@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <openssl/evp.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 
@@ -11,8 +12,8 @@ class Client {
         ~Client();
         std::string send_message(std::string message);
         std::string read_message();
-        std::string read_message_rsa();
-        void send_message_rsa(std::string message);
+        std::string read_message_rsa(EVP_PKEY * private_key);
+        void send_message_rsa(std::string message, EVP_PKEY * public_key);
     private:
         int sock_;
         int r_;

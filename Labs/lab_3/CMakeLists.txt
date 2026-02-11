@@ -19,6 +19,7 @@ add_executable(client
     client.cpp
     user_input.cpp
     evp.cpp
+    rsa_key_tools.cpp
     lab3_client.cpp
 )
 
@@ -26,6 +27,7 @@ add_executable(server
     server.cpp
     user_input.cpp
     evp.cpp
+    rsa_key_tools.cpp
     lab3_server.cpp
 )
 

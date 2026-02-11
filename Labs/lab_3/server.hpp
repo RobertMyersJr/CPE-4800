@@ -3,6 +3,7 @@
 
 #include <sys/types.h> 
 #include <sys/socket.h>
+#include <openssl/evp.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -16,12 +17,12 @@ class Server {
         /**
          * @brief Starts the bank server and receiving messages. The program control is transferred to this function and will not return.
          */
-        void start_bank_server();
+        void start_server();
     private:
         void send_message(std::string message);
-        void send_encrpyted_message(std::string message);
+        void send_encrpyted_message(std::string message, EVP_PKEY * public_key);
         std::string read_message();
-        std::string read_encrpyted_message();
+        std::string read_encrpyted_message(EVP_PKEY * private_key);
         int get_account_number();
         int sock_;
         int client_sock_;
