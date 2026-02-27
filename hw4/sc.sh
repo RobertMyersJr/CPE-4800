@@ -1,33 +1,44 @@
 #!/bin/bash
 
-# Define a 64-bit hex key (8 bytes) and 8 bytes of plaintext
-KEY="0123456789ABCDEF"
-PLAINTEXT="HelloWorld"
+# 1. Setup variables
+# DES blocks are 8 bytes. "Standard" is 8 chars.
+PLAINTEXT="Standard" 
+KEY_HEX="0123456789ABCDEF"  
+PROV="-provider legacy -provider default"
 
-echo "Plaintext: $PLAINTEXT"
-echo "Key: $KEY"
-echo "---------------------------------------"
+echo "Original Plaintext: $PLAINTEXT"
+echo "--------------------------------------------------------"
 
-# 1. Simulate DED Sequence (D1 -> E1 -> D1)
-# Step 1: Decrypt plaintext with K1
-STEP1=$(echo -n "$PLAINTEXT" | openssl enc -des-ecb -d -K "$KEY" -nopad -nosalt | xxd -p)
-# Step 2: Encrypt result with K1 (effectively K2)
-STEP2=$(echo -n "$STEP1" | xxd -r -p | openssl enc -des-ecb -e -K "$KEY" -nopad -nosalt | xxd -p)
-# Step 3: Decrypt result with K1 (effectively K3)
-FINAL_DED=$(echo -n "$STEP2" | xxd -r -p | openssl enc -des-ecb -d -K "$KEY" -nopad -nosalt | xxd -p)
+# 2. Perform Standard DES Decryption (Single Stage)
+# Using -nopad to ensure we get an output even if the block isn't 'valid' ciphertext
+DES_SINGLE=$(echo -n "$PLAINTEXT" | openssl enc -des-ecb -d -K "$KEY_HEX" -nosalt -nopad -base64 $PROV 2>/dev/null)
 
-echo "DED Sequence Output (Hex): $FINAL_DED"
+# 3. Perform the proposed DED (Decrypt -> Encrypt -> Decrypt)
+# Step 1: Decrypt
+STEP1=$(echo -n "$PLAINTEXT" | openssl enc -des-ecb -d -K "$KEY_HEX" -nosalt -nopad $PROV 2>/dev/null)
 
-# 2. Perform Single DES Decryption
-SINGLE_DES=$(echo -n "$PLAINTEXT" | openssl enc -des-ecb -d -K "$KEY" -nopad -nosalt | xxd -p)
+# Step 2: Encrypt (result of Step 1)
+STEP2=$(echo -n "$STEP1" | openssl enc -des-ecb -e -K "$KEY_HEX" -nosalt -nopad $PROV 2>/dev/null)
 
-echo "Single DES Decrypt (Hex):   $SINGLE_DES"
-echo "---------------------------------------"
+# Step 3: Decrypt (result of Step 2)
+DED_FINAL=$(echo -n "$STEP2" | openssl enc -des-ecb -d -K "$KEY_HEX" -nosalt -nopad -base64 $PROV 2>/dev/null)
 
-# 3. Verification
-if [ "$FINAL_DED" == "$SINGLE_DES" ]; then
-    echo "SUCCESS: DED with identical keys is equivalent to single DES decryption."
-else
-    echo "FAILURE: The outputs do not match."
+# 4. Check for empty strings
+if [[ -z "$DES_SINGLE" || -z "$DED_FINAL" ]]; then
+    echo "ERROR: OpenSSL returned an empty string. Check if 'legacy' provider is available."
+    openssl list -providers
+    exit 1
 fi
 
+# 5. Print Results
+echo "Standard DES (Decryption) Result: $DES_SINGLE"
+echo "Proposed DED Algorithm Result:    $DED_FINAL"
+echo "--------------------------------------------------------"
+
+# 6. Verification Logic
+if [ "$DES_SINGLE" == "$DED_FINAL" ]; then
+    echo "VERIFICATION: SUCCESS"
+    echo "The strings match. DED(K,K,K) is equivalent to a single DES(K) operation."
+else
+    echo "VERIFICATION: FAILURE - The strings do not match."
+fi
