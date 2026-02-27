@@ -10,8 +10,10 @@
 
 namespace {
     uint32_t round_function(uint32_t R, uint64_t subkey) {
+        // Following similar algorithm here https://www.geeksforgeeks.org/python/feistel-cipher/
         uint32_t key_part = (uint32_t)(subkey & 0xFFFFFFFF);
         uint32_t result = R ^ key_part;
+        // cyclic rotate by 3
         return (result << 3) | (result >> 29); 
     }
 }

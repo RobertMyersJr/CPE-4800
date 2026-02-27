@@ -34,9 +34,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if(message.length() != 8) {
-        std::printf("ERROR: message is not 64 bits\n");
-        return 1;
+     if(message.length() > 8) {
+         std::printf("ERROR: message is not within 64 bits\n");
+         return 1;
     }
 
     auto pair = apply_pc_1(key);
@@ -56,6 +56,6 @@ int main(int argc, char* argv[]) {
 
     std::printf("Original String:  %s\n", message.data());
     std::printf("Original Hex:  %lx\n", message_data);
-    std::printf("Cipher:    %lx\n", cipher);
+    std::printf("Cipher: %lx\n", cipher);
 
 }

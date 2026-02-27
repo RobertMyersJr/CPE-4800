@@ -1,6 +1,6 @@
 /**
 ******************************************************************************
-* @file des_encrypt.cpp
+* @file des.hpp
 * @author Robert Myers Jr.
 * @version V1.0
 * @brief Helper methods to preform the light weight DES function

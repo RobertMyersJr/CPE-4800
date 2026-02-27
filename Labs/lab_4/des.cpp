@@ -1,6 +1,6 @@
 /**
 ******************************************************************************
-* @file des_encrypt.cpp
+* @file des.cpp
 * @author Robert Myers Jr.
 * @version V1.0
 * @brief Helper methods to preform the light weight DES function
@@ -20,6 +20,7 @@ constexpr int pc_1_table_length = 56;
 constexpr int pc_2_table_length = 48;
 constexpr int c_and_d_length = 28;
 
+// Tables were taken from lecture slides
 constexpr int pc_1_table[pc_1_table_length] = {
     57, 49, 41, 33, 25, 17, 9,
     1,  58, 50, 42, 34, 26, 18,
