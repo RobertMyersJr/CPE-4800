@@ -61,7 +61,7 @@ class BankService {
          */
         std::string deposit_command(std::string deposit_command);
 
-        void write_srp_information(std::string_view identify, std::string_view salt, std::string_view verifier);
+        bool write_srp_information(std::string_view identify, std::string_view salt, std::string_view verifier);
 
         std::tuple<std::string, std::string, std::string> get_srp_information();
 

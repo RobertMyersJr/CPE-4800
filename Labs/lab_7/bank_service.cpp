@@ -69,8 +69,11 @@ BankService::BankService(
         std::string verifier) {
     client_socket_ = client_socket;
     account_number_ = account_number;
-    write_srp_information(std::to_string(account_number), salt, verifier);
-    std::cout << "Account created!" << std::endl;
+    if(write_srp_information(std::to_string(account_number), salt, verifier)) {
+        std::cout << "Account created!" << std::endl;
+    } else {
+        send_message("ERROR! Account already exists!");
+    }
 }
 
 BankService::BankService(int client_socket, 
@@ -107,6 +110,11 @@ BankService::BankService(int client_socket,
         } 
         auto [I, S, V] = get_srp_information();
 
+        if(I == "") {
+            send_message("ERROR: Account not found. Closing Connection...");
+            throw std::runtime_error("Account not found");
+        }
+
 
         auto B = SRP::generate_B(SRP::g, b, SRP::k, std::stoull(V), SRP::n);
         auto message_for_client = std::format("{}:{}", S, B);
@@ -118,7 +126,7 @@ BankService::BankService(int client_socket,
         std::cout << "U: " << U << "\n";
 
         auto key = SRP::generate_key_server(A, std::stoull(V), U, b, SRP::n);
-        std::cout << "KEY:"<<key<<"\n";
+        std::cout << "key: " << key << "\n";
         auto message = read_message(key);
         std::cout << "Message received: " << message << std::endl;
         if(message == "Hi, I am the client") {
@@ -281,13 +289,18 @@ std::string BankService::read_message(std::optional<uint64_t> key_mask) {
     return std::string(quick_decrypt(message_recevied, key_mask));
 }
 
-void BankService::write_srp_information(std::string_view identify, std::string_view salt, std::string_view verifier) {
+bool BankService::write_srp_information(std::string_view identify, std::string_view salt, std::string_view verifier) {
+    auto [I, S, V] = get_srp_information();
+    if(I != ""){
+        return false;
+    }
     std::ofstream srp_file("srp_information.txt", std::ios_base::app);
 
     auto formatted_time = get_time();
 
     std::string formatted_srp_information = std::format("- Account: {} - identify: {} salt: {} verifier: {}\n", account_number_, identify, salt, verifier);
     srp_file << formatted_srp_information;
+    return true;
 }
 
 std::tuple<std::string, std::string, std::string> BankService::get_srp_information() {
@@ -317,11 +330,10 @@ std::tuple<std::string, std::string, std::string> BankService::get_srp_informati
 
     std::string lastLine = srp_log.substr(lineStart, lineEnd - lineStart);
 
-    std::string line = "- Account: 123 - identify: 123 salt: 5 verifier: 2680355691976787848";
     std::regex reg("identify: (\\S+) salt: (\\d+) verifier: (\\d+)");
     std::smatch matches;
 
-    if (std::regex_search(line, matches, reg)) {
+    if (std::regex_search(lastLine, matches, reg)) {
         std::string identify = matches[1].str();
         uint64_t salt = std::stoull(matches[2].str());
         uint64_t verifier = std::stoull(matches[3].str());

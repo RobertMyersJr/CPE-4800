@@ -7,6 +7,7 @@
 #include <iostream>
 #include <optional>
 #include <sstream>
+#include <string>
 #include <string_view>
 #include <srp_utils.hpp>
 
@@ -29,6 +30,11 @@ void login_procedure(Client& client) {
     auto challenge = client.send_message_aes(
             std::format("{}:{}", identify, A)
     );
+    if (challenge == "ERROR: Account not found. Closing Connection...") {
+        std::cout << challenge << std::endl;
+        std::cout << "Exiting..."<< std::endl;
+        exit(0);
+    }
 
     std::stringstream ss(challenge);
 
@@ -39,6 +45,7 @@ void login_procedure(Client& client) {
     std::getline(ss, B, ':');
 
     auto u = SRP::hash_to_u64(std::format("{}:{}",A,B));
+    std::cout << "salt: " << salt << "\n";
     std::cout << "U: " << u << "\n";
 
     auto x = SRP::create_x(salt, identify, password);
@@ -64,7 +71,7 @@ void register_procedure(Client& client) {
     std::cout << "Input Password: ";
     std::string password;
     std::getline(std::cin, password);
-    std::string salt = "5";
+    std::string salt = std::to_string(s);
 
     auto x = SRP::create_x(
             std::string_view(salt), 

@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <exception>
 #include <iostream>
 #include <iterator>
 #include <sstream>
@@ -88,11 +89,15 @@ int Server::get_account_number(std::string account_number_given) {
             return -1;
         }
     }
-    auto account_number = std::stoi(account_number_given);
-    if(account_number < 0) {
+    try {
+        auto account_number = std::stoi(account_number_given);
+        if(account_number < 0) {
+            return -1;
+        }
+        return account_number;
+    } catch(const std::exception& e) {
         return -1;
     }
-    return account_number;
 }
 
 int Server::get_account_number() {
@@ -168,23 +173,31 @@ void Server::start_bank_server() {
             std::getline(ss, A_str, ':');
 
             account_number = get_account_number(identify);
+            if(account_number == -1) {
+                close(client_sock_);
+                continue;
+            }
             A = std::stoull(A_str);
         }
 
-        BankService bank_service(client_sock_, account_number, A);
-        bank_service.send_prompt();
-        while(1)
-        {
-            auto received_message = read_message();
-            if (received_message == "")
+        try {
+            BankService bank_service(client_sock_, account_number, A);
+            bank_service.send_prompt();
+            while(1)
             {
-                printf("server client died, server loops\n");
-                close(client_sock_);
-                break;
+                auto received_message = read_message();
+                if (received_message == "")
+                {
+                    printf("server client died, server loops\n");
+                    close(client_sock_);
+                    break;
+                }
+                if(!bank_service.run_bank_service(received_message)) {
+                    break;
+                }
             }
-            if(!bank_service.run_bank_service(received_message)) {
-                break;
-            }
+        } catch (const std::runtime_error& e) {
+            close(client_sock_);
         }
     }
 
