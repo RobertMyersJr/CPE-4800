@@ -57,7 +57,7 @@ namespace {
 }
 
 void BankService::send_message(std::string message, std::optional<uint64_t> key_mask){
-    std::cout << "Sending over " <<message << "\n";
+    // std::cout << "Sending over " <<message << "\n";
     auto encrypted_message = quick_encrypt(message, key_mask);
     sendto(client_socket_, encrypted_message.data(), encrypted_message.size(), 0, (struct sockaddr *)&client_addr, sizeof(*client_addr));
 }
@@ -73,6 +73,7 @@ BankService::BankService(
         std::cout << "Account created!" << std::endl;
     } else {
         send_message("ERROR! Account already exists!");
+        throw std::runtime_error("Account already exists!");
     }
 }
 
@@ -115,20 +116,21 @@ BankService::BankService(int client_socket,
             throw std::runtime_error("Account not found");
         }
 
+        std::printf("I: %s S: %s V: %s\n", I.data(), S.data(), V.data());
 
         auto B = SRP::generate_B(SRP::g, b, SRP::k, std::stoull(V), SRP::n);
         auto message_for_client = std::format("{}:{}", S, B);
-        std::cout << "Sending this to client" << message_for_client << "\n";
+        // std::cout << "Sending this to client" << message_for_client << "\n";
         send_message(message_for_client);
 
         auto U = SRP::hash_to_u64(std::format("{}:{}", A, B));
 
-        std::cout << "U: " << U << "\n";
+        // std::cout << "U: " << U << "\n";
 
         auto key = SRP::generate_key_server(A, std::stoull(V), U, b, SRP::n);
         std::cout << "key: " << key << "\n";
         auto message = read_message(key);
-        std::cout << "Message received: " << message << std::endl;
+        // std::cout << "Message received: " << message << std::endl;
         if(message == "Hi, I am the client") {
             std::cout << "Client authenticated\n";
             send_message("Hi, I am the server", std::make_optional(key));
@@ -242,6 +244,7 @@ std::string BankService::balance_command() {
 void BankService::exit_command() {
     std::string message_to_send = "Exiting...\n";
     send_message(message_to_send);
+    std::cout << "Exit command received. Exiting...\n";
     close(client_socket_);
     exit(0);
 }
@@ -329,14 +332,15 @@ std::tuple<std::string, std::string, std::string> BankService::get_srp_informati
     size_t lineEnd = srp_log.find('\n', found_pos);
 
     std::string lastLine = srp_log.substr(lineStart, lineEnd - lineStart);
-
-    std::regex reg("identify: (\\S+) salt: (\\d+) verifier: (\\d+)");
+    std::string reg_str = std::format("identify: {} salt: (\\d+) verifier: (\\d+)", account_number_);
+    std::regex reg(reg_str);
     std::smatch matches;
 
     if (std::regex_search(lastLine, matches, reg)) {
         std::string identify = matches[1].str();
-        uint64_t salt = std::stoull(matches[2].str());
-        uint64_t verifier = std::stoull(matches[3].str());
+        std::cout << "found " << identify << std::endl;
+        uint64_t salt = std::stoull(matches[1].str());
+        uint64_t verifier = std::stoull(matches[2].str());
         return std::make_tuple(
             identify, 
             std::to_string(salt), 

@@ -8,13 +8,13 @@
 #include <format>
 
 namespace SRP {
-    constexpr int n = 13;
-    constexpr int g = 3;
-    constexpr int k = 11;
+    constexpr uint64_t n = 53;
+    constexpr uint64_t g = 2;
+    constexpr uint64_t k = 11;
 
     /**
      * @brief Performs modular exponentiation (base^exp % mod).
-     * Prevents overflow by using __uint128_t for intermediate products.
+     * Prevents overflow by using __uint128_t.
      */
     inline uint64_t mod_pow(uint64_t base, uint64_t exp, uint64_t mod) {
         uint64_t res = 1;
@@ -73,7 +73,7 @@ namespace SRP {
         
         // Ensure base remains positive before modulo
         uint64_t base = (B >= k_gx) ? (B - k_gx) : (n - (k_gx - B) % n);
-        uint64_t exp = a + (u * x);
+        uint64_t exp = (a + (static_cast<__uint128_t>(u) * x) % (n - 1)) % (n - 1);
         
         return mod_pow(base, exp, n);
     }
@@ -82,7 +82,7 @@ namespace SRP {
      * @brief Server Shared Secret: S = (A * v^u)^b % n
      */
     inline uint64_t generate_key_server(uint64_t A, uint64_t v, uint64_t u, uint64_t b, uint64_t n) {
-        uint64_t v_u = mod_pow(v, u, n);
+        uint64_t v_u = mod_pow(v, u % (n - 1), n);
 
         uint64_t base = (static_cast<__uint128_t>(A) * v_u) % n;
 

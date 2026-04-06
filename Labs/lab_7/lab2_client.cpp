@@ -46,24 +46,27 @@ void login_procedure(Client& client) {
 
     auto u = SRP::hash_to_u64(std::format("{}:{}",A,B));
     std::cout << "salt: " << salt << "\n";
-    std::cout << "U: " << u << "\n";
+    // std::cout << "U: " << u << "\n";
 
     auto x = SRP::create_x(salt, identify, password);
+    std::cout << "X  loging " << x << std::endl;
 
     auto key_A = SRP::generate_key_client(x, std::stoull(B), SRP::k, SRP::g, a, u, SRP::n);
 
     std::cout << "KEY:"<<key_A<<"\n";
 
     auto server_message = client.send_message_aes("Hi, I am the client", std::make_optional(key_A));
-    std::cout << "Server message" << server_message << "\n";
+    // std::cout << "Server message" << server_message << "\n";
     if(server_message == "Hi, I am the server") {
         std::cout << "Server authenticated\n";
     } else {
         std::cout << "Server authentication failed!\n";
+        std::cout << "Exiting...\n";
+        exit(0);
     }
 }
 void register_procedure(Client& client) {
-    std::cout << "Account Number not found. Starting registration process.\n";
+    std::cout << "Starting registration process.\n";
     std::cout << "Input Account Number: ";
     std::string identify;
     std::getline(std::cin, identify);
@@ -78,6 +81,7 @@ void register_procedure(Client& client) {
             std::string_view(identify), 
             std::string_view(password)
             );
+    std::cout << "X  registartion" << x << std::endl;
     auto verifier = SRP::create_verifier(x);
     std::cout << (client.send_message_aes(
             std::format("{}:{}:{}", identify, salt, verifier)
@@ -95,7 +99,7 @@ int main() {
         server_message = client.send_message_aes(get_user_input(server_message));
         if(server_message == "register") {
             register_procedure(client);
-            std::cout << "Exiting program...";
+            std::cout << "Exiting program...\n";
             exit(0);
         } else if(server_message == "login") {
             login_procedure(client);
@@ -103,6 +107,8 @@ int main() {
         } else if(server_message.find("Exiting") != std::string::npos) {
             std::cout << server_message;
             exit(0);
+        } else if(server_message == "Received Garbage Closing connection") {
+
         } else {
             std::cout << server_message;
         }

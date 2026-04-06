@@ -1,11 +1,11 @@
 /**
-******************************************************************************
-* @file Server.cpp
-* @author Robert Myers Jr.
-* @version V1.0
-* @brief Implementation of the Server Class. See header for more informating
-******************************************************************************
-*/
+ ******************************************************************************
+ * @file Server.cpp
+ * @author Robert Myers Jr.
+ * @version V1.0
+ * @brief Implementation of the Server Class. See header for more informating
+ ******************************************************************************
+ */
 #include "server.hpp"
 #include "bank_service.hpp"
 #include "tools/evp.hpp"
@@ -76,7 +76,7 @@ std::string Server::send_message(std::string message){
     int n = recvfrom(client_sock_, message_in_, max, 0, NULL, NULL);
 
     auto message_received = std::vector<unsigned char>(message_in_, message_in_ + n);
-    
+
     auto received = quick_decrypt(message_received);
 
     return received;
@@ -110,10 +110,10 @@ int Server::get_account_number() {
 
 UserPath Server::get_prompt() {
     std::string message_to_send("Welcome to RFM bank.\n'Registration' or 'Login': ");
-    
+
     std::string response = send_message(message_to_send);
     std::transform(response.begin(), response.end(), response.begin(),
-               [](unsigned char c){ return std::tolower(c); });
+            [](unsigned char c){ return std::tolower(c); });
     if(response == "registration") {
         return UserPath::Regristration;
     } else if(response == "login") {
@@ -141,46 +141,46 @@ void Server::start_bank_server() {
             printf("server accept error \n");
         }
         auto action = get_prompt();
-        if(action == UserPath::Error) {
-            std::cout << "Received Garbage Closing connection\n";
-            close(client_sock_);
-            continue;
-        } else if(action == UserPath::Regristration) {
-            auto register_string = send_message("register");
-            std::stringstream ss(register_string);
-
-            std::string account_number_str;
-            std::string salt;
-            std::string verifier;
-
-            std::getline(ss, account_number_str, ':');
-            std::getline(ss, salt, ':');
-            std::getline(ss, verifier, ':');
-
-            account_number = get_account_number(account_number_str);
-
-            BankService(client_sock_, account_number, salt, verifier);
-            send_message("You are now Registered!");
-            continue;
-        } else {
-            auto register_string = send_message("login");
-            std::stringstream ss(register_string);
-
-            std::string identify;
-            std::string A_str;
-
-            std::getline(ss, identify, ':');
-            std::getline(ss, A_str, ':');
-
-            account_number = get_account_number(identify);
-            if(account_number == -1) {
+        try {
+            if(action == UserPath::Error) {
+                std::cout << "Received Garbage Closing connection\n";
                 close(client_sock_);
                 continue;
-            }
-            A = std::stoull(A_str);
-        }
+            } else if(action == UserPath::Regristration) {
+                auto register_string = send_message("register");
+                std::stringstream ss(register_string);
 
-        try {
+                std::string account_number_str;
+                std::string salt;
+                std::string verifier;
+
+                std::getline(ss, account_number_str, ':');
+                std::getline(ss, salt, ':');
+                std::getline(ss, verifier, ':');
+
+                account_number = get_account_number(account_number_str);
+
+                BankService(client_sock_, account_number, salt, verifier);
+                send_message("You are now Registered!");
+                continue;
+            } else {
+                auto register_string = send_message("login");
+                std::stringstream ss(register_string);
+
+                std::string identify;
+                std::string A_str;
+
+                std::getline(ss, identify, ':');
+                std::getline(ss, A_str, ':');
+
+                account_number = get_account_number(identify);
+                if(account_number == -1) {
+                    close(client_sock_);
+                    continue;
+                }
+                A = std::stoull(A_str);
+            }
+
             BankService bank_service(client_sock_, account_number, A);
             bank_service.send_prompt();
             while(1)
