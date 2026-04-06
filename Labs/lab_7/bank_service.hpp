@@ -16,7 +16,12 @@
 
 class BankService {
     public:
-        BankService(int client_socket, int account_number);
+        BankService(int client_socket, 
+                int account_number,
+                int A);
+        BankService(int client_socket, int account_number,
+                std::string salt, 
+                std::string verifier);
         void send_prompt();
         bool run_bank_service(std::string command);
     private:
@@ -29,11 +34,6 @@ class BankService {
          * @brief Sends a message to the client
          */
         void send_message(std::string message);
-
-        /**
-         * @brief Registers a new account
-         */
-        void register_procedure();
 
         /**
          * @brief Writes successful deposit actions to the transaction log
@@ -58,6 +58,7 @@ class BankService {
          */
         std::string deposit_command(std::string deposit_command);
         void write_srp_information(std::string_view identify, std::string_view salt, std::string_view verifier);
+
         std::tuple<std::string, std::string, std::string> get_srp_information();
 
         /**

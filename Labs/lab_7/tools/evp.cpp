@@ -8,11 +8,13 @@
 */
 #include "evp.hpp"
 #include <array>
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <numbers>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+#include <optional>
 #include <ostream>
 #include <span>
 #include <string>
@@ -58,14 +60,19 @@ int decrypt (const unsigned char *ciphertext, int ciphertext_len, unsigned char 
     EVP_CIPHER_CTX_free(ctx);
     return plaintext_len;
 }
-std::vector<unsigned char> quick_encrypt(std::string& plaintext) {
+std::vector<unsigned char> quick_encrypt(std::string& plaintext, std::optional<uint64_t> key_mask) {
+    unsigned char key_in_use[33];
+    strncpy((char*)key_in_use, (const char*)key, 33);
+    if(key_mask) {
+        ((uint64_t*)key_in_use)[0] = key_mask.value();
+    }
     std::vector<unsigned char> buffer(EVP_MAX_IV_LENGTH + plaintext.length() + EVP_MAX_BLOCK_LENGTH);
 
     RAND_bytes(buffer.data(), EVP_MAX_IV_LENGTH);
 
     int cipher_len = encrypt(
         (unsigned char*)plaintext.data(), (int)plaintext.length(),
-        (unsigned char*)key,
+        (unsigned char*)key_in_use,
         buffer.data(), 
         buffer.data() + EVP_MAX_IV_LENGTH 
     );
@@ -74,8 +81,13 @@ std::vector<unsigned char> quick_encrypt(std::string& plaintext) {
     return buffer;
 }
 
-std::string quick_decrypt(std::vector<unsigned char>& encrypted_message) {
+std::string quick_decrypt(std::vector<unsigned char>& encrypted_message, std::optional<uint64_t> key_mask) {
     if (encrypted_message.size() < EVP_MAX_IV_LENGTH) return "";
+    unsigned char key_in_use[33];
+    strncpy((char*)key_in_use, (const char*)key, 33);
+    if(key_mask) {
+        ((uint64_t*)key_in_use)[0] = key_mask.value();
+    }
 
     int ciphertext_len = (int)encrypted_message.size() - EVP_MAX_IV_LENGTH;
     std::vector<unsigned char> plain_buf(ciphertext_len + EVP_MAX_BLOCK_LENGTH);
@@ -83,7 +95,7 @@ std::string quick_decrypt(std::vector<unsigned char>& encrypted_message) {
     int plain_len = decrypt(
         encrypted_message.data() + EVP_MAX_IV_LENGTH,
         ciphertext_len,
-        (unsigned char*)key,
+        (unsigned char*)key_in_use,
         encrypted_message.data(),
         plain_buf.data()
     );

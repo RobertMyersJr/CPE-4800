@@ -16,6 +16,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>  
 
+enum class UserPath { Login, Regristration, Error };
 constexpr int buflen = 256;
 class Server {
     public:
@@ -40,6 +41,17 @@ class Server {
          * @brief Gets the account number
          */
         int get_account_number();
+
+        /**
+         * @brief Gets the account number
+         */
+        int get_account_number(std::string account_number_given);
+
+        /**
+         * Gets the prompt to login in or registration
+         */
+        UserPath get_prompt();
+
         int sock_;
         int client_sock_;
 

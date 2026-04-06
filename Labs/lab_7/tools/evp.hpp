@@ -8,6 +8,8 @@
 ******************************************************************************
 */
 
+#include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -42,11 +44,11 @@ int decrypt(const unsigned char *ciphertext, int plaintext_len, unsigned char*ke
 /**
  * @brief Helper method to quickly encrypt data
  */
-std::vector<unsigned char> quick_encrypt(std::string& message);
+std::vector<unsigned char> quick_encrypt(std::string& message, std::optional<uint64_t> key_mask = std::nullopt);
 
 
 /**
  * @brief Helper method to quickly decrypt data
  */
-std::string quick_decrypt(std::vector<unsigned char>& encrypted_message);
+std::string quick_decrypt(std::vector<unsigned char>& encrypted_message, std::optional<uint64_t> key_mask = std::nullopt);
 

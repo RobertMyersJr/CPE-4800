@@ -21,6 +21,7 @@ add_executable(client
     tools/evp.cpp
     lab2_client.cpp
     user_input.cpp
+    srp_utils.cpp
 )
 
 add_executable(server
@@ -28,6 +29,7 @@ add_executable(server
     tools/evp.cpp
     lab2_server.cpp
     server.cpp
+    srp_utils.cpp
 )
 
 # Link OpenSSL

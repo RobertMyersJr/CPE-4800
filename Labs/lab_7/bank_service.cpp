@@ -8,6 +8,7 @@
  */
 #include "bank_service.hpp"
 #include "client.hpp"
+#include "srp_utils.hpp"
 #include "tools/evp.hpp"
 #include "user_input.hpp"
 #include <bit>
@@ -29,6 +30,7 @@
 #include <format>
 
 namespace {
+    constexpr int b = 7;
     constexpr int max = 256;
     constexpr std::string_view TRANSCRIPT_FILE = "transcript_log.txt";
     bool convert_string(std::string_view floating_point_number, double & output) {
@@ -56,11 +58,23 @@ void BankService::send_message(std::string message){
     sendto(client_socket_, encrypted_message.data(), encrypted_message.size(), 0, (struct sockaddr *)&client_addr, sizeof(*client_addr));
 }
 
+BankService::BankService(
+        int client_socket, 
+        int account_number,
+        std::string salt, 
+        std::string verifier) {
+    client_socket_ = client_socket;
+    account_number_ = account_number;
+    write_srp_information(std::to_string(account_number), salt, verifier);
+}
 
-BankService::BankService(int client_socket, int account_number): 
+BankService::BankService(int client_socket, 
+        int account_number,
+        int A): 
     client_socket_(client_socket), 
     account_number_(account_number),
     balance(1000.0) {
+        // Account validation
         std::ifstream transcript_file(TRANSCRIPT_FILE.data());
 
         std::stringstream buffer;
@@ -72,26 +86,33 @@ BankService::BankService(int client_socket, int account_number):
         size_t found_pos = transcation_log.rfind(line_to_find);
 
         // File is empty let's not try to read
-        if (found_pos == std::string::npos) {
-            // Create account
+        if (found_pos != std::string::npos) {
+            size_t lineStart = transcation_log.rfind('\n', found_pos);
             
-            return;
-        } else {
-            // Authorization step
-        }
+            // Move past the newline character
+            lineStart++; 
 
-        size_t lineStart = transcation_log.rfind('\n', found_pos);
-        
-        // Move past the newline character
-        lineStart++; 
+            size_t lineEnd = transcation_log.find('\n', found_pos);
 
-        size_t lineEnd = transcation_log.find('\n', found_pos);
+            std::string lastLine = transcation_log.substr(lineStart, lineEnd - lineStart);
 
-        std::string lastLine = transcation_log.substr(lineStart, lineEnd - lineStart);
+            size_t last_space_pos = lastLine.rfind(' ');
 
-        size_t last_space_pos = lastLine.rfind(' ');
+            balance = std::stod(lastLine.substr(last_space_pos + 2));
+        } 
+        auto [I, S, V] = get_srp_information();
 
-        balance = std::stod(lastLine.substr(last_space_pos + 2));
+
+        auto B = SRP::generate_B(SRP::g, b, SRP::k, std::stoull(V), SRP::n);
+        auto message_for_client = std::format("{}:{}", S, B);
+        std::cout << "Sending this to client" << message_for_client << "\n";
+        send_message(message_for_client);
+
+        auto U = SRP::hash_to_u64(std::format("{}:{}", A, B));
+
+        std::cout << "U: " << U;
+
+        auto key = SRP::generate_key_server(A, std::stoull(V), U, b, SRP::n);
     }
 
 bool BankService::run_bank_service(std::string input) {
@@ -245,19 +266,6 @@ std::string BankService::read_message() {
             message_in_ + len);
     return std::string(quick_decrypt(message_recevied));
 }
-void BankService::register_procedure() {
-    send_message("register");
-    auto message = read_message();
-    // message is space separated salt, identify, password
-    std::stringstream stream(message);
-    std::string salt;
-    std::string identify;
-    std::string verifier;
-    stream >> salt >> identify >> verifier;
-    write_srp_information(identify, salt, verifier);
-    send_prompt();
-
-}
 
 void BankService::write_srp_information(std::string_view identify, std::string_view salt, std::string_view verifier) {
     std::ofstream srp_file("srp_information.txt", std::ios_base::app);
@@ -265,10 +273,6 @@ void BankService::write_srp_information(std::string_view identify, std::string_v
     auto formatted_time = get_time();
 
     std::string formatted_srp_information = std::format("- Account: {} - identify: {} salt: {} verifier: {}\n", account_number_, identify, salt, verifier);
-
-    srp_file << formatted_time;
-    srp_file << formatted_srp_information;
-
 }
 
 std::tuple<std::string, std::string, std::string> BankService::get_srp_information() {

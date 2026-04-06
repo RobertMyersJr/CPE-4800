@@ -10,8 +10,10 @@
 #include "bank_service.hpp"
 #include "tools/evp.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <iterator>
+#include <string>
 #include <strings.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
@@ -76,11 +78,7 @@ std::string Server::send_message(std::string message){
     return received;
 }
 
-int Server::get_account_number() {
-    std::string message_to_send("Enter account number: ");
-
-    std::string account_number_given = send_message(message_to_send);
-
+int Server::get_account_number(std::string account_number_given) {
     for(int i = 0; i < account_number_given.length(); i++) {
         char letter = account_number_given.c_str()[i];
         if(!isdigit(letter)) {
@@ -94,6 +92,29 @@ int Server::get_account_number() {
     return account_number;
 }
 
+int Server::get_account_number() {
+    std::string message_to_send("Enter account number: ");
+
+    std::string account_number_given = send_message(message_to_send);
+
+    return get_account_number(account_number_given);
+}
+
+UserPath Server::get_prompt() {
+    std::string message_to_send("Registration or Login?");
+    
+    std::string response = send_message(message_to_send);
+    std::transform(response.begin(), response.end(), response.begin(),
+               [](unsigned char c){ return std::tolower(c); });
+    if(response == "registration") {
+        return UserPath::Regristration;
+    } else if(response == "login") {
+        return UserPath::Login;
+    }
+    return UserPath::Error;
+
+}
+
 void Server::start_bank_server() {
     while (1) //Try to accept a client request
     {
@@ -104,6 +125,26 @@ void Server::start_bank_server() {
         if (client_sock_ < 0)
         {
             printf("server accept error \n");
+        }
+        auto action = get_prompt();
+        if(action == UserPath::Error) {
+            close(client_sock_);
+            continue;
+        } else if(action == UserPath::Regristration) {
+            auto register_string = send_message("register");
+            std::stringstream ss(register_string);
+
+            std::string account_number;
+            std::string salt;
+            std::string verifier;
+
+            std::getline(ss, account_number, ":");
+            std::getline(ss, salt, ":");
+            std::getline(ss, verifier, ":");
+
+            auto given_account_number = get_account_number(account_number);
+
+            BankService(client_sock_, given_account_number, salt, verifier);
         }
         printf("server accepted a client connection from \n");
         printf("Client: IP= %s port=%d \n", inet_ntoa(client_addr_.sin_addr), ntohs(client_addr_.sin_port));
