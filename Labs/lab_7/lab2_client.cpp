@@ -30,7 +30,7 @@ void login_procedure(Client& client) {
     auto challenge = client.send_message_aes(
             std::format("{}:{}", identify, A)
     );
-    if (challenge == "ERROR: Account not found. Closing Connection...") {
+    if (challenge == "Error: invalid account number") {
         std::cout << challenge << std::endl;
         std::cout << "Exiting..."<< std::endl;
         exit(0);
@@ -45,15 +45,15 @@ void login_procedure(Client& client) {
     std::getline(ss, B, ':');
 
     auto u = SRP::hash_to_u64(std::format("{}:{}",A,B));
-    std::cout << "salt: " << salt << "\n";
+    //std::cout << "salt: " << salt << "\n";
     // std::cout << "U: " << u << "\n";
 
     auto x = SRP::create_x(salt, identify, password);
-    std::cout << "X  loging " << x << std::endl;
+    // std::cout << "X  loging " << x << std::endl;
 
     auto key_A = SRP::generate_key_client(x, std::stoull(B), SRP::k, SRP::g, a, u, SRP::n);
 
-    std::cout << "KEY:"<<key_A<<"\n";
+    // std::cout << "KEY:"<<key_A<<"\n";
 
     auto server_message = client.send_message_aes("Hi, I am the client", std::make_optional(key_A));
     // std::cout << "Server message" << server_message << "\n";
@@ -83,9 +83,14 @@ void register_procedure(Client& client) {
             );
     std::cout << "X  registartion" << x << std::endl;
     auto verifier = SRP::create_verifier(x);
-    std::cout << (client.send_message_aes(
+    auto message = (client.send_message_aes(
             std::format("{}:{}:{}", identify, salt, verifier)
-    )) << "\n";
+    ));
+    if (message == "Error: invalid account number") {
+        std::cout <<  message << std::endl;
+        std::cout << "Exiting..."<< std::endl;
+        exit(0);
+    }
 }
 
 int main() {
@@ -108,7 +113,8 @@ int main() {
             std::cout << server_message;
             exit(0);
         } else if(server_message == "Received Garbage Closing connection") {
-
+            std::cout << "Server Closed connection due to garbage\n";
+            exit(0);
         } else {
             std::cout << server_message;
         }

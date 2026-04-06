@@ -144,6 +144,7 @@ void Server::start_bank_server() {
         try {
             if(action == UserPath::Error) {
                 std::cout << "Received Garbage Closing connection\n";
+                send_message("Received Garbage Closing connection");
                 close(client_sock_);
                 continue;
             } else if(action == UserPath::Regristration) {
@@ -160,6 +161,12 @@ void Server::start_bank_server() {
 
                 account_number = get_account_number(account_number_str);
 
+                if(account_number == -1) {
+                    send_message("Error: invalid account number");
+                    close(client_sock_);
+                    continue;
+                }
+
                 BankService(client_sock_, account_number, salt, verifier);
                 send_message("You are now Registered!");
                 continue;
@@ -175,6 +182,7 @@ void Server::start_bank_server() {
 
                 account_number = get_account_number(identify);
                 if(account_number == -1) {
+                    send_message("Error: invalid account number");
                     close(client_sock_);
                     continue;
                 }

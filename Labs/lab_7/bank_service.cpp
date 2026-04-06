@@ -116,7 +116,7 @@ BankService::BankService(int client_socket,
             throw std::runtime_error("Account not found");
         }
 
-        std::printf("I: %s S: %s V: %s\n", I.data(), S.data(), V.data());
+        // std::printf("I: %s S: %s V: %s\n", I.data(), S.data(), V.data());
 
         auto B = SRP::generate_B(SRP::g, b, SRP::k, std::stoull(V), SRP::n);
         auto message_for_client = std::format("{}:{}", S, B);
@@ -128,7 +128,7 @@ BankService::BankService(int client_socket,
         // std::cout << "U: " << U << "\n";
 
         auto key = SRP::generate_key_server(A, std::stoull(V), U, b, SRP::n);
-        std::cout << "key: " << key << "\n";
+        // std::cout << "key: " << key << "\n";
         auto message = read_message(key);
         // std::cout << "Message received: " << message << std::endl;
         if(message == "Hi, I am the client") {
@@ -294,7 +294,7 @@ std::string BankService::read_message(std::optional<uint64_t> key_mask) {
 
 bool BankService::write_srp_information(std::string_view identify, std::string_view salt, std::string_view verifier) {
     auto [I, S, V] = get_srp_information();
-    if(I != ""){
+    if(I != "") {
         return false;
     }
     std::ofstream srp_file("srp_information.txt", std::ios_base::app);
