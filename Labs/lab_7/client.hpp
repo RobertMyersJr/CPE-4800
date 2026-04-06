@@ -8,6 +8,8 @@
 ******************************************************************************
 */
 
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -38,7 +40,7 @@ class Client {
          *
          * @param message The message being sent
          */
-        std::string send_message_aes(std::string message);
+        std::string send_message_aes(std::string message, std::optional<uint64_t> key_mask = std::nullopt);
     private:
         int sock_;
         int r_;

@@ -8,7 +8,9 @@
 ******************************************************************************
 */
 
+#include <cstdint>
 #include <netinet/in.h>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -18,8 +20,9 @@ class BankService {
     public:
         BankService(int client_socket, 
                 int account_number,
-                int A);
-        BankService(int client_socket, int account_number,
+                int A = 0);
+        BankService(int client_socket, 
+                int account_number,
                 std::string salt, 
                 std::string verifier);
         void send_prompt();
@@ -33,7 +36,7 @@ class BankService {
         /**
          * @brief Sends a message to the client
          */
-        void send_message(std::string message);
+        void send_message(std::string message, std::optional<uint64_t> key_mask = std::nullopt);
 
         /**
          * @brief Writes successful deposit actions to the transaction log
@@ -57,6 +60,7 @@ class BankService {
          * @param deposit_command The command itself
          */
         std::string deposit_command(std::string deposit_command);
+
         void write_srp_information(std::string_view identify, std::string_view salt, std::string_view verifier);
 
         std::tuple<std::string, std::string, std::string> get_srp_information();
@@ -71,6 +75,6 @@ class BankService {
          */
         void exit_command();
         
-        std::string read_message();
+        std::string read_message(std::optional<uint64_t> key_mask = std::nullopt);
         char message_in_[256];
 };

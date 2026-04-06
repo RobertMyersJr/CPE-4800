@@ -9,6 +9,7 @@
 #include "client.hpp"
 #include "tools/evp.hpp"
 
+#include <cstdint>
 #include <iostream>
 #include <openssl/evp.h>
 #include <sys/types.h> 
@@ -57,11 +58,11 @@ std::string Client::read_message_aes() {
     return std::string(quick_decrypt(message_recevied));
 }
 
-std::string Client::send_message_aes(std::string message) {
-    auto encrypted_message = quick_encrypt(message);
+std::string Client::send_message_aes(std::string message, std::optional<uint64_t> key_mask) {
+    auto encrypted_message = quick_encrypt(message, key_mask);
     write(sock_, encrypted_message.data(), encrypted_message.size());
     int n = read(sock_, message_in_, max);
     auto message_recevied = std::vector<unsigned char>(message_in_, 
             message_in_ + n);
-    return quick_decrypt(message_recevied);
+    return quick_decrypt(message_recevied, key_mask);
 }

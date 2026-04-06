@@ -19,6 +19,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -26,8 +27,10 @@
 #include <strings.h>
 #include <sys/socket.h>
 #include <sys/unistd.h>
+#include <thread>
 #include <vector>
 #include <format>
+#include <regex>
 
 namespace {
     constexpr int b = 7;
@@ -53,8 +56,9 @@ namespace {
     }
 }
 
-void BankService::send_message(std::string message){
-    auto encrypted_message = quick_encrypt(message);
+void BankService::send_message(std::string message, std::optional<uint64_t> key_mask){
+    std::cout << "Sending over " <<message << "\n";
+    auto encrypted_message = quick_encrypt(message, key_mask);
     sendto(client_socket_, encrypted_message.data(), encrypted_message.size(), 0, (struct sockaddr *)&client_addr, sizeof(*client_addr));
 }
 
@@ -66,6 +70,7 @@ BankService::BankService(
     client_socket_ = client_socket;
     account_number_ = account_number;
     write_srp_information(std::to_string(account_number), salt, verifier);
+    std::cout << "Account created!" << std::endl;
 }
 
 BankService::BankService(int client_socket, 
@@ -110,9 +115,18 @@ BankService::BankService(int client_socket,
 
         auto U = SRP::hash_to_u64(std::format("{}:{}", A, B));
 
-        std::cout << "U: " << U;
+        std::cout << "U: " << U << "\n";
 
         auto key = SRP::generate_key_server(A, std::stoull(V), U, b, SRP::n);
+        std::cout << "KEY:"<<key<<"\n";
+        auto message = read_message(key);
+        std::cout << "Message received: " << message << std::endl;
+        if(message == "Hi, I am the client") {
+            std::cout << "Client authenticated\n";
+            send_message("Hi, I am the server", std::make_optional(key));
+        } else {
+            std::cout << "Client authentication failed!\n";
+        }
     }
 
 bool BankService::run_bank_service(std::string input) {
@@ -255,7 +269,7 @@ void BankService::write_deposit_to_transcript(double deposit_amount) {
 
 }
 
-std::string BankService::read_message() {
+std::string BankService::read_message(std::optional<uint64_t> key_mask) {
     bzero(message_in_, max);
     int len = recvfrom(client_socket_, message_in_, max, 0, NULL, NULL);
     if (len == 0)
@@ -264,7 +278,7 @@ std::string BankService::read_message() {
     }
     auto message_recevied = std::vector<unsigned char>(message_in_, 
             message_in_ + len);
-    return std::string(quick_decrypt(message_recevied));
+    return std::string(quick_decrypt(message_recevied, key_mask));
 }
 
 void BankService::write_srp_information(std::string_view identify, std::string_view salt, std::string_view verifier) {
@@ -273,6 +287,7 @@ void BankService::write_srp_information(std::string_view identify, std::string_v
     auto formatted_time = get_time();
 
     std::string formatted_srp_information = std::format("- Account: {} - identify: {} salt: {} verifier: {}\n", account_number_, identify, salt, verifier);
+    srp_file << formatted_srp_information;
 }
 
 std::tuple<std::string, std::string, std::string> BankService::get_srp_information() {
@@ -302,18 +317,21 @@ std::tuple<std::string, std::string, std::string> BankService::get_srp_informati
 
     std::string lastLine = srp_log.substr(lineStart, lineEnd - lineStart);
 
-    std::stringstream stream(lastLine);
+    std::string line = "- Account: 123 - identify: 123 salt: 5 verifier: 2680355691976787848";
+    std::regex reg("identify: (\\S+) salt: (\\d+) verifier: (\\d+)");
+    std::smatch matches;
 
-    std::string account_info;
-    std::string identify_info;
-    std::string salt_info;
-    std::string verifier_info;
+    if (std::regex_search(line, matches, reg)) {
+        std::string identify = matches[1].str();
+        uint64_t salt = std::stoull(matches[2].str());
+        uint64_t verifier = std::stoull(matches[3].str());
+        return std::make_tuple(
+            identify, 
+            std::to_string(salt), 
+            std::to_string(verifier)
+        );
+    }
 
-    stream >> account_info >> identify_info >> salt_info >> verifier_info;
-    return std::make_tuple(
-        identify_info.substr(9), 
-        salt_info.substr(6), 
-        verifier_info.substr(10)
-    );
 
+    return std::make_tuple("", "", "");
 }

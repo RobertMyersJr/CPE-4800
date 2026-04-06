@@ -36,14 +36,17 @@ namespace SRP {
     }
 
 
+    inline uint64_t create_x(std::string_view salt, std::string_view identity, std::string_view password) {
+        std::string hash_input = std::format("{}:{}:{}", salt, identity, password);
+        uint64_t x = hash_to_u64(hash_input); 
+        return x; 
+    }
+
     /**
      * @brief Generates the password verifier (v)
      */
-    inline uint64_t create_verifier(std::string_view salt, std::string_view identity, std::string_view password) {
-        std::string hash_input = std::format("{}:{}:{}", salt, identity, password);
-        uint64_t x = hash_to_u64(hash_input); // Simplified x derivation
-        // In full SRP: v = g^x % n. Requires g and n parameters.
-        return x; 
+    inline uint64_t create_verifier(uint64_t x) {
+        return mod_pow(g,x,n); 
     }
 
     /**
@@ -80,8 +83,9 @@ namespace SRP {
      */
     inline uint64_t generate_key_server(uint64_t A, uint64_t v, uint64_t u, uint64_t b, uint64_t n) {
         uint64_t v_u = mod_pow(v, u, n);
+
         uint64_t base = (static_cast<__uint128_t>(A) * v_u) % n;
-        
+
         return mod_pow(base, b, n);
     }
 }

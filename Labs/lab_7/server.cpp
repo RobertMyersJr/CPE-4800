@@ -11,8 +11,10 @@
 #include "tools/evp.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <iostream>
 #include <iterator>
+#include <sstream>
 #include <string>
 #include <strings.h>
 #include <sys/types.h> 
@@ -65,6 +67,7 @@ std::string Server::read_message() {
 }
 
 std::string Server::send_message(std::string message){
+    std::cout << "sending over " << message << std::endl;
     auto encrypted_message = quick_encrypt(message);
     sendto(client_sock_, encrypted_message.data(), encrypted_message.size(), 0, (struct sockaddr *)&client_addr_, sizeof(client_addr_));
 
@@ -101,7 +104,7 @@ int Server::get_account_number() {
 }
 
 UserPath Server::get_prompt() {
-    std::string message_to_send("Registration or Login?");
+    std::string message_to_send("Welcome to RFM bank.\n'Registration' or 'Login': ");
     
     std::string response = send_message(message_to_send);
     std::transform(response.begin(), response.end(), response.begin(),
@@ -122,43 +125,53 @@ void Server::start_bank_server() {
 
         socklen_t len = sizeof(client_addr_);
         client_sock_ = accept(sock_, (struct sockaddr *)&client_addr_, &len);
+
+        int account_number;
+        uint64_t A;
+
+        printf("server accepted a client connection from \n");
+        printf("Client: IP= %s port=%d \n", inet_ntoa(client_addr_.sin_addr), ntohs(client_addr_.sin_port));
         if (client_sock_ < 0)
         {
             printf("server accept error \n");
         }
         auto action = get_prompt();
         if(action == UserPath::Error) {
+            std::cout << "Received Garbage Closing connection\n";
             close(client_sock_);
             continue;
         } else if(action == UserPath::Regristration) {
             auto register_string = send_message("register");
             std::stringstream ss(register_string);
 
-            std::string account_number;
+            std::string account_number_str;
             std::string salt;
             std::string verifier;
 
-            std::getline(ss, account_number, ":");
-            std::getline(ss, salt, ":");
-            std::getline(ss, verifier, ":");
+            std::getline(ss, account_number_str, ':');
+            std::getline(ss, salt, ':');
+            std::getline(ss, verifier, ':');
 
-            auto given_account_number = get_account_number(account_number);
+            account_number = get_account_number(account_number_str);
 
-            BankService(client_sock_, given_account_number, salt, verifier);
-        }
-        printf("server accepted a client connection from \n");
-        printf("Client: IP= %s port=%d \n", inet_ntoa(client_addr_.sin_addr), ntohs(client_addr_.sin_port));
-
-        auto account_number = get_account_number();
-        if(account_number == -1) {
-            std::cout << "account number input failure\n";
-            std::string message_to_send{"Account number is invalid. Exiting..."};
-            send_message(message_to_send);
-            close(client_sock_);
+            BankService(client_sock_, account_number, salt, verifier);
+            send_message("You are now Registered!");
             continue;
+        } else {
+            auto register_string = send_message("login");
+            std::stringstream ss(register_string);
+
+            std::string identify;
+            std::string A_str;
+
+            std::getline(ss, identify, ':');
+            std::getline(ss, A_str, ':');
+
+            account_number = get_account_number(identify);
+            A = std::stoull(A_str);
         }
 
-        BankService bank_service(client_sock_, account_number);
+        BankService bank_service(client_sock_, account_number, A);
         bank_service.send_prompt();
         while(1)
         {
